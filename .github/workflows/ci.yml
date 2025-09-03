@@ -1,0 +1,51 @@
+name: CI - Docker Build & Test - Complex Project
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Travis: (implicit) checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Travis: "sudo: required" is default in GitHub Actions
+      # Travis: "language: generic" → not needed
+      # Travis: services: docker → GitHub runners already have Docker installed
+
+      # before_install: docker build ...
+      - name: Build test image
+        run: docker build -t niravprajapati/react-test -f ./client/Dockerfile.dev ./client
+
+      # script: docker run ...
+      - name: Run tests
+        run: docker run -e CI=true niravprajapati/react-test npm test
+
+      # after_success: build all production images
+      - name: Build production images
+        run: |
+          docker build -t niravprajapati/multi-client ./client
+          docker build -t niravprajapati/multi-nginx ./nginx
+          docker build -t niravprajapati/multi-server ./server
+          docker build -t niravprajapati/multi-worker ./worker
+
+      # after_success: docker login
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # after_success: docker push ...
+      - name: Push images to Docker Hub
+        run: |
+          docker push niravprajapati/multi-client
+          docker push niravprajapati/multi-nginx
+          docker push niravprajapati/multi-server
+          docker push niravprajapati/multi-worker
