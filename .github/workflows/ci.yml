@@ -49,3 +49,32 @@ jobs:
           docker push niravprajapati/multi-nginx
           docker push niravprajapati/multi-server
           docker push niravprajapati/multi-worker
+
+deploy:
+  needs: build-and-test
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/main'
+
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_ID }}" --password-stdin
+
+    - name: Build production image
+      run: docker build -t niravprajapati/multi-client -f ./Dockerfile .
+
+    - name: Push production image to Docker Hub
+      run: docker push niravprajapati/multi-client
+
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v22
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: "multi-docker"
+        environment_name: "Multi-docker-env"
+        region: "us-east-1"
+        version_label: ${{ github.sha }}
+        deployment_package: Dockerrun.aws.json

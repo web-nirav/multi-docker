@@ -4,7 +4,7 @@ import axios from "axios";
 const Fib = () => {
   const [seenIndexes, setSeenIndexes] = useState([]);
   const [values, setValues] = useState({});
-  const [index, setIndex] = useState("");
+  const [index, setIndex] = useState<Record<string, number>>({});
 
   const fetchValues = async () => {
     const values = await axios.get("/api/values/current");
@@ -22,7 +22,7 @@ const Fib = () => {
     fetchIndexes();
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     await axios.post("/api/values", {
