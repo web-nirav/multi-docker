@@ -11,23 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Travis: (implicit) checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Travis: "sudo: required" is default in GitHub Actions
-      # Travis: "language: generic" → not needed
-      # Travis: services: docker → GitHub runners already have Docker installed
-
-      # before_install: docker build ...
       - name: Build test image
         run: docker build -t niravprajapati/react-test -f ./client/Dockerfile.dev ./client
 
-      # script: docker run ...
       - name: Run tests
         run: docker run -e CI=true niravprajapati/react-test npm test
 
-      # after_success: build all production images
       - name: Build production images
         run: |
           docker build -t niravprajapati/multi-client ./client
@@ -35,7 +27,6 @@ jobs:
           docker build -t niravprajapati/multi-server ./server
           docker build -t niravprajapati/multi-worker ./worker
 
-      # after_success: docker login
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -50,31 +41,22 @@ jobs:
           docker push niravprajapati/multi-server
           docker push niravprajapati/multi-worker
 
-deploy:
-  needs: build-and-test
-  runs-on: ubuntu-latest
-  if: github.ref == 'refs/heads/main'
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Log in to Docker Hub
-      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_ID }}" --password-stdin
-
-    - name: Build production image
-      run: docker build -t niravprajapati/multi-client -f ./Dockerfile .
-
-    - name: Push production image to Docker Hub
-      run: docker push niravprajapati/multi-client
-
-    - name: Deploy to Elastic Beanstalk
-      uses: einaregilsson/beanstalk-deploy@v22
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        application_name: "multi-docker"
-        environment_name: "Multi-docker-env"
-        region: "us-east-1"
-        version_label: ${{ github.sha }}
-        deployment_package: Dockerrun.aws.json
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: "multi-docker"
+          environment_name: "Multi-docker-env"
+          region: "us-east-1"
+          version_label: ${{ github.sha }}
+          deployment_package: Dockerrun.aws.json
