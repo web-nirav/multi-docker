@@ -59,4 +59,4 @@ jobs:
           environment_name: "Multi-docker-env"
           region: "us-east-1"
           version_label: ${{ github.sha }}
-          deployment_package: Dockerrun.aws.json
+          deployment_package: docker-compose.prod.yml
